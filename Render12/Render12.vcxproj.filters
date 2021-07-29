@@ -36,7 +36,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D3D11Drv.h">
+    <ClInclude Include="D3D12Drv.h">
       <Filter>RenderDevice\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenDevBackend.h">
@@ -89,7 +89,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="D3D11Drv.cpp">
+    <ClCompile Include="D3D12Drv.cpp">
       <Filter>RenderDevice\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RenDevBackend.cpp">

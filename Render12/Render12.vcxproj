@@ -14,19 +14,19 @@
     <ProjectGuid>{692EF8AC-8A14-4F0D-8E58-DCBFCF6A181E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Render12</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Deus Ex Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Deus Ex Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -88,7 +88,7 @@
     <ClInclude Include="GouraudRenderer.h" />
     <ClInclude Include="TextureCache.h" />
     <ClInclude Include="ConstantBuffer.h" />
-    <ClInclude Include="D3D11Drv.h" />
+    <ClInclude Include="D3D12Drv.h" />
     <ClInclude Include="DeviceState.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="GlobalShaderConstants.h" />
@@ -104,7 +104,7 @@
     <ClCompile Include="ComplexSurfaceRenderer.cpp" />
     <ClCompile Include="GouraudRenderer.cpp" />
     <ClCompile Include="TextureCache.cpp" />
-    <ClCompile Include="D3D11Drv.cpp" />
+    <ClCompile Include="D3D12Drv.cpp" />
     <ClCompile Include="DeviceState.cpp" />
     <ClCompile Include="GlobalShaderConstants.cpp" />
     <ClCompile Include="RenDevBackend.cpp" />

@@ -39,7 +39,24 @@ TileRenderer::TileRenderer(ID3D12Device& Device, ID3D12RootSignature& RootSignat
     psoDesc.RTVFormats[0] = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
     psoDesc.SampleDesc.Count = 1;
 
-    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, __uuidof(m_PipelineState), &m_PipelineState), L"Failed to create pipeline state object.");
+    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineState)), L"Failed to create pipeline state object.");
+
+    //Translucent
+
+    psoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+    psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND::D3D12_BLEND_ONE;
+    psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND::D3D12_BLEND_INV_SRC_COLOR;
+    psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP::D3D12_BLEND_OP_ADD;
+
+    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineStateTranslucent)), L"Failed to create pipeline state object.");
+
+    //Modulated
+
+    psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND::D3D12_BLEND_DEST_COLOR;
+    psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND::D3D12_BLEND_SRC_COLOR;
+    psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP::D3D12_BLEND_OP_ADD;
+
+    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineStateModulated)), L"Failed to create pipeline state object.");
 }
 
 void TileRenderer::NewFrame(const size_t iFrameIndex)
@@ -48,9 +65,16 @@ void TileRenderer::NewFrame(const size_t iFrameIndex)
     m_InstanceBuffer.NewFrame(iFrameIndex);
 }
 
-void TileRenderer::Bind()
+void TileRenderer::Bind(DWORD PolyFlags)
 {
-    m_CommandList.SetPipelineState(m_PipelineState.Get());
+    // Switch PSO depending on flags
+    if(PolyFlags & PF_Translucent)
+        m_CommandList.SetPipelineState(m_PipelineStateTranslucent.Get());
+    else if(PolyFlags & PF_Modulated)
+        m_CommandList.SetPipelineState(m_PipelineStateModulated.Get());
+    else
+        m_CommandList.SetPipelineState(m_PipelineState.Get());
+
     m_CommandList.IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 }
 

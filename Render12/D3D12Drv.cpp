@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "D3D11Drv.h"
+#include "D3D12Drv.h"
 #include "Helpers.h"
 
 #pragma warning(push, 1)
@@ -30,13 +30,13 @@ UBOOL UD3D12RenderDevice::Init(UViewport* const pInViewport, const INT iNewX, co
     pInViewport->Exec(L"ShowLog");
 #endif
 
-    LOGMESSAGE(L"Initializing Direct3D 11 Renderer.");
+    LOGMESSAGE(L"Initializing Direct3D 12 Renderer.");
 
     try
     {
         if (!m_Backend.Init(static_cast<HWND>(pInViewport->GetWindow())))
         {
-            LOGWARNING(L"Failed to initialize Direct3D 11 Renderer.");
+            LOGWARNING(L"Failed to initialize Direct3D 12 Renderer.");
             return false;
         }
 
@@ -54,7 +54,7 @@ UBOOL UD3D12RenderDevice::Init(UViewport* const pInViewport, const INT iNewX, co
        // m_pDeviceState = std::make_unique<DeviceState>(Device, DeviceContext);
         m_pTextureCache = std::make_unique<TextureCache>(Device, CommandList);
         m_pTileRenderer = std::make_unique<TileRenderer>(Device, m_pGlobalShaderConstants->GetRootSignature(), CommandList);
-       // m_pGouraudRenderer = std::make_unique<GouraudRenderer>(Device, DeviceContext);
+        //m_pGouraudRenderer = std::make_unique<GouraudRenderer>(Device, m_pGlobalShaderConstants->GetRootSignature(), CommandList);
        // m_pComplexSurfaceRenderer = std::make_unique<ComplexSurfaceRenderer>(Device, DeviceContext);
     }
     catch (const WException& ex)
@@ -117,7 +117,7 @@ void UD3D12RenderDevice::Lock(const FPlane /*FlashScale*/, const FPlane /*FlashF
     m_bNoTilesDrawnYet = true;
     const size_t iFrameIndex = m_Backend.NewFrame();
     m_pTileRenderer->NewFrame(iFrameIndex);
-    //m_pGouraudRenderer->NewFrame();
+    //m_pGouraudRenderer->NewFrame(iFrameIndex);
     //m_pComplexSurfaceRenderer->NewFrame();
     m_pGlobalShaderConstants->Bind();
 }
@@ -149,20 +149,18 @@ void UD3D12RenderDevice::Render()
     if (m_pTileRenderer->InBatch())
     {
         m_pTileRenderer->StopBatch();
-        m_pTileRenderer->Bind();
+        //m_pTileRenderer->Bind();
         m_pTileRenderer->Draw();
     }
 
-    
-
-
-    //if (m_pGouraudRenderer->IsMapped())
-    //{
-    //    m_pGouraudRenderer->Unmap();
-    //    m_pGouraudRenderer->Bind();
-    //    m_pGouraudRenderer->Draw();
-    //}
-
+    /*
+    if (m_pGouraudRenderer->InBatch())
+    {
+        m_pGouraudRenderer->StopBatch();
+        m_pGouraudRenderer->Bind();
+        m_pGouraudRenderer->Draw();
+    }
+    */
     //if (m_pComplexSurfaceRenderer->IsMapped())
     //{
     //    m_pComplexSurfaceRenderer->Unmap();
@@ -286,12 +284,13 @@ void UD3D12RenderDevice::DrawComplexSurface(FSceneNode* const /*pFrame*/, FSurfa
 
 void UD3D12RenderDevice::DrawGouraudPolygon(FSceneNode* const /*pFrame*/, FTextureInfo& Info, FTransTexture** const ppPts, const int NumPts, const DWORD PolyFlags, FSpanBuffer* const /*pSpan*/)
 {
-    ////assert(m_bNoTilesDrawnYet); //Want to be sure that tiles are the last thing to be drawn -> doesn't hold for gouraud
+    /*
+    assert(m_bNoTilesDrawnYet); //Want to be sure that tiles are the last thing to be drawn -> doesn't hold for gouraud
 
-    //if (NumPts < 3) //Degenerate triangle
-    //{
-    //    return;
-    //}
+    if (NumPts < 3) //Degenerate triangle
+    {
+        return;
+    }
 
     //const auto& BlendState = m_pDeviceState->GetBlendStateForPolyFlags(PolyFlags);
     //const auto& DepthStencilState = m_pDeviceState->GetDepthStencilStateForPolyFlags(PolyFlags);
@@ -302,79 +301,92 @@ void UD3D12RenderDevice::DrawGouraudPolygon(FSceneNode* const /*pFrame*/, FTextu
 
     //m_pDeviceState->PrepareDepthStencilState(DepthStencilState);
     //m_pDeviceState->PrepareBlendState(BlendState);
-    //const TextureConverter::TextureData& texDiffuse = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
+    const TextureConverter::TextureData& texDiffuse = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
 
-    //if (!m_pGouraudRenderer->IsMapped())
-    //{
-    //    m_pGouraudRenderer->Map();
-    //}
+    if (!m_pGouraudRenderer->InBatch())
+    {
+        m_pGouraudRenderer->StartBatch();
+    }
 
-    //GouraudRenderer::Vertex* const pVerts = m_pGouraudRenderer->GetTriangleFan(NumPts);
-    //for (int i = 0; i < NumPts; i++) //Set fan verts
-    //{
-    //    GouraudRenderer::Vertex& v = pVerts[i];
+    GouraudRenderer::Vertex* const pVerts = m_pGouraudRenderer->GetTriangleFan(NumPts);
+    for (int i = 0; i < NumPts; i++) //Set fan verts
+    {
+        GouraudRenderer::Vertex& v = pVerts[i];
 
-    //    static_assert(sizeof(ppPts[i]->Point) >= sizeof(v.Pos), "Sizes differ, can't use reinterpret_cast");
-    //    v.Pos = reinterpret_cast<decltype(v.Pos)&>(ppPts[i]->Point);
+        static_assert(sizeof(ppPts[i]->Point) >= sizeof(v.Pos), "Sizes differ, can't use reinterpret_cast");
+        v.Pos = reinterpret_cast<decltype(v.Pos)&>(ppPts[i]->Point);
 
-    //    static_assert(sizeof(ppPts[i]->Light) >= sizeof(v.Color), "Sizes differ, can't use reinterpret_cast");
-    //    v.Color = reinterpret_cast<decltype(v.Color)&>(ppPts[i]->Light);
+        static_assert(sizeof(ppPts[i]->Light) >= sizeof(v.Color), "Sizes differ, can't use reinterpret_cast");
+        v.Color = reinterpret_cast<decltype(v.Color)&>(ppPts[i]->Light);
 
-    //    v.TexCoords.x = ppPts[i]->U * texDiffuse.fMultU;
-    //    v.TexCoords.y = ppPts[i]->V * texDiffuse.fMultV;
+        v.TexCoords.x = ppPts[i]->U * texDiffuse.fMultU;
+        v.TexCoords.y = ppPts[i]->V * texDiffuse.fMultV;
 
-    //    v.PolyFlags = PolyFlags;
+        v.PolyFlags = PolyFlags;
 
-    //  //  v->Fog = *(Vec4*)&Pts[i]->Fog.X;
+      //  v->Fog = *(Vec4*)&Pts[i]->Fog.X;
 
-
-    //}
-
+      
+    }
+    */
 }
 
 void UD3D12RenderDevice::DrawTile(FSceneNode* const /*pFrame*/, FTextureInfo& Info, const FLOAT fX, const FLOAT fY, const FLOAT fXL, const FLOAT fYL, const FLOAT fU, const FLOAT fV, const FLOAT fUL, const FLOAT fVL, FSpanBuffer* const /*pSpan*/, const FLOAT fZ, const FPlane Color, const FPlane /*Fog*/, const DWORD PolyFlags)
 {
-    assert(m_pTileRenderer);
-    //assert(m_pTextureCache);
-  //  assert(m_pDeviceState);
-    m_bNoTilesDrawnYet = false;
+        assert(m_pTileRenderer);
+        //assert(m_pTextureCache);
+        //assert(m_pDeviceState);
+        m_bNoTilesDrawnYet = false;
 
-    const DWORD PolyFlagsCorrected = (PolyFlags & (PF_Translucent | PF_Masked)) != PF_Masked ? PolyFlags ^ PF_Masked : PolyFlags; //Translucent has precedence over masked
+        /*
 
-    const auto& BlendState = m_pDeviceState->GetBlendStateForPolyFlags(PolyFlagsCorrected);
+        auto& CommandList = m_Backend.GetCommandList();
 
-    //Flush state
-    //if (!m_pDeviceState->IsBlendStatePrepared(BlendState) || !m_pTextureCache->IsPrepared(Info, 0) || m_pGouraudRenderer->IsMapped() || m_pComplexSurfaceRenderer->IsMapped())
-    //{
-    //    Render();
-    //}
+        CommandList.OMSetBlendFactor(D3D12_BLEND_DEST_ALPHA);
 
-    //m_pDeviceState->PrepareBlendState(BlendState);
-    const auto& TextureData = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
+        /*
+        const auto& BlendState = m_pDeviceState->GetBlendStateForPolyFlags(PolyFlagsCorrected);
 
-    if (!m_pTileRenderer->InBatch())
-    {
-        m_pTileRenderer->StartBatch();
-    }
+        //Flush state
+        if (!m_pDeviceState->IsBlendStatePrepared(BlendState) || !m_pTextureCache->IsPrepared(Info, 0))
+        {
+            Render();
+        }
 
-    TileRenderer::Tile& t = m_pTileRenderer->GetTile();
+        m_pDeviceState->PrepareBlendState(BlendState);
+        */
+        const DWORD PolyFlagsCorrected = (PolyFlags & (PF_Translucent | PF_Masked)) == (PF_Translucent | PF_Masked) ? PolyFlags ^ PF_Masked : PolyFlags; //Translucent has precedence over masked
 
-    t.XYPos.x = fX;
-    t.XYPos.y = fX + fXL;
-    t.XYPos.z = fY;
-    t.XYPos.w = fY + fYL;
+        //Flush
+        Render();
 
-    t.TexCoord.x = fU / Info.Texture->USize;
-    t.TexCoord.y = (fU + fUL) / Info.Texture->USize;
-    t.TexCoord.z = fV / Info.Texture->VSize;
-    t.TexCoord.w = (fV + fVL) / Info.Texture->VSize;
+        m_pTileRenderer->Bind(PolyFlagsCorrected);
 
-    //t.Z = fZ;
-    static_assert(sizeof(Color) >= sizeof(t.Color), "Sizes differ, can't use reinterpret_cast");
-    t.Color = reinterpret_cast<const decltype(t.Color)&>(Color);
+        const auto& TextureData = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
 
-    t.PolyFlags = PolyFlagsCorrected;
-    t.TextureIndex = TextureData.iHeapIndex;
+        if (!m_pTileRenderer->InBatch())
+        {
+            m_pTileRenderer->StartBatch();
+        }
+
+        TileRenderer::Tile& t = m_pTileRenderer->GetTile();
+
+        t.XYPos.x = fX;
+        t.XYPos.y = fX + fXL;
+        t.XYPos.z = fY;
+        t.XYPos.w = fY + fYL;
+        t.TexCoord.x = fU * TextureData.fMultU;
+        t.TexCoord.y = (fU + fUL) * TextureData.fMultU;
+        t.TexCoord.z = fV * TextureData.fMultV;
+        t.TexCoord.w = (fV + fVL) * TextureData.fMultV;
+
+        //t.Z = fZ;
+
+        static_assert(sizeof(Color) >= sizeof(t.Color), "Sizes differ, can't use reinterpret_cast");
+        t.Color = reinterpret_cast<const decltype(t.Color)&>(Color);
+
+        t.PolyFlags = PolyFlagsCorrected;
+        t.TextureIndex = TextureData.iHeapIndex;
 }
 
 void UD3D12RenderDevice::Draw2DLine(FSceneNode* const /*pFrame*/, const FPlane /*Color*/, const DWORD /*LineFlags*/, const FVector /*P1*/, const FVector /*P2*/)

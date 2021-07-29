@@ -14,15 +14,24 @@ RenDevBackend::~RenDevBackend()
 
 bool RenDevBackend::Init(const HWND hWnd)
 {
-    ComPtr<IDXGIFactory4> pFactory;
-    ThrowIfFail(CreateDXGIFactory1(__uuidof(IDXGIFactory4), &pFactory), L"Failed to create DXGI factory.");
+    UINT dxgiFactoryFlags = 0;
 
+#if defined(_DEBUG)
     { //Scope for pointer
-        ComPtr<ID3D12Debug> pDebugController;
-        D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
-        assert(pDebugController);
-        pDebugController->EnableDebugLayer();
+        ComPtr<ID3D12Debug> debugController;
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+        {
+            debugController->EnableDebugLayer();
+
+            // Enable additional debug layers.
+            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+        }
     }
+#endif
+
+    //Create DXGI factory
+    ComPtr<IDXGIFactory4> pFactory;
+    ThrowIfFail(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&pFactory)), L"Failed to create DXGI factory.");
 
     //Create device
     const D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_11_0;

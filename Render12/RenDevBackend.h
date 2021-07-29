@@ -27,7 +27,7 @@ protected:
     static constexpr float m_fDepthClearValue = 0.0f;
     size_t m_iCurrentFrame = 0;
 
-    D3D11_VIEWPORT m_Viewport;
+    D3D12_VIEWPORT m_Viewport;
 
     ComPtr<IDXGIAdapter1> m_pAdapter;
     ComPtr<ID3D12Device> m_pDevice12;
