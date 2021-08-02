@@ -1,6 +1,8 @@
 #pragma once
 
-#include "DynamicBuffer.h"
+#include "DynamicBuffer12.h"
+#include "Helpers.h"
+#include "ShaderCompiler.h"
 
 class GouraudRenderer
 {
@@ -11,37 +13,45 @@ public:
         DirectX::XMFLOAT3 Color;
         DirectX::XMFLOAT2 TexCoords;
         unsigned int PolyFlags;
+        unsigned int TextureIndex;
     };
 
-    explicit GouraudRenderer(ID3D11Device& Device, ID3D11DeviceContext& DeviceContext);
+    explicit GouraudRenderer(ID3D12Device& Device, ID3D12RootSignature& RootSignature, ID3D12GraphicsCommandList& CommandList);
     GouraudRenderer(const GouraudRenderer&) = delete;
     GouraudRenderer& operator=(const GouraudRenderer&) = delete;
-
-    void NewFrame();
-    void Map() { m_VertexBuffer.Map(); m_IndexBuffer.Map(); }
-    void Unmap() { m_VertexBuffer.Unmap(); m_IndexBuffer.Unmap(); }
-    bool IsMapped() const { return m_VertexBuffer.IsMapped() || m_IndexBuffer.IsMapped(); }
+    
+    void NewFrame(const size_t iFrameIndex);
+    void StartBatch() { assert(!m_bInBatch);  m_InstanceBuffer.StartBatch(); m_bInBatch = true; }
+    void StopBatch() { m_bInBatch = false; }
+    bool InBatch() const { return m_bInBatch; }
 
     void Bind();
     void Draw();
 
-    Vertex* GetTriangleFan(const size_t iSize) { return DynamicGPUBufferHelpers::GetTriangleFan(m_VertexBuffer, m_IndexBuffer, iSize); }
+    Vertex* GetTriangleFan(const size_t iSize) { return m_InstanceBuffer.PushBack(iSize); }
+
+    Vertex& GetTriangle() { return m_InstanceBuffer.PushBack(); }
 
     //Diagnostics
-    size_t GetNumIndices() const { return m_IndexBuffer.GetSize(); }
+    size_t GetNumIndices() const { return m_InstanceBuffer.GetSize(); }
     size_t GetNumDraws() const { return m_iNumDraws; }
-    size_t GetMaxIndices() const { return m_IndexBuffer.GetReserved(); }
+    size_t GetMaxIndices() const { return m_InstanceBuffer.GetReserved(); }
 
 protected:
-    ID3D11Device& m_Device;
-    ID3D11DeviceContext& m_DeviceContext;
+    ID3D12Device& m_Device;
+    ID3D12RootSignature& m_RootSignature;
+    ID3D12GraphicsCommandList& m_CommandList;
 
-    ComPtr<ID3D11InputLayout> m_pInputLayout;
-    ComPtr<ID3D11VertexShader> m_pVertexShader;
-    ComPtr<ID3D11PixelShader> m_pPixelShader;
+    ShaderCompiler::CompiledShader m_pVertexShader;
+    ShaderCompiler::CompiledShader m_pPixelShader;
 
-    DynamicGPUBuffer<Vertex, D3D11_BIND_FLAG::D3D11_BIND_VERTEX_BUFFER> m_VertexBuffer;
-    DynamicGPUBuffer<unsigned short, D3D11_BIND_FLAG::D3D11_BIND_INDEX_BUFFER> m_IndexBuffer;
+    ComPtr<ID3D12PipelineState> m_PipelineState;
+
+    DynamicBuffer12<Vertex> m_InstanceBuffer;  //We only create a per-instance-data buffer, we don't use a vertex buffer as vertex positions are irrelevant
+    //DynamicBuffer12<unsigned short> m_IndexBuffer;
+
+    D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
     size_t m_iNumDraws = 0; //Number of draw calls this frame, for stats
+    bool m_bInBatch = false;
 };

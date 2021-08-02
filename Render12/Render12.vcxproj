@@ -37,14 +37,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Render DLL.props" />
     <Import Project="..\deus ex.props" />
-    <Import Project="..\d3d11.props" />
+    <Import Project="..\d3d12.props" />
     <Import Project="..\debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Deus Ex Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Render DLL.props" />
     <Import Project="..\deus ex.props" />
-    <Import Project="..\d3d11.props" />
+    <Import Project="..\d3d12.props" />
     <Import Project="..\release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />

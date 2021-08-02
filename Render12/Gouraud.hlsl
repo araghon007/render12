@@ -1,13 +1,13 @@
 #include "Render12.hlsli"
 
-Texture2D TexDiffuse : register(t0);
+Texture2D TexDiffuse[1024] : register(t0);
 
 struct SPoly
 {
     float4 Pos : Position0;
     float3 Color : Color0;
     float2 TexCoord : TexCoord0;
-    uint PolyFlags : BlendIndices0;
+    uint2 PolyFlags : BlendIndices0;
 };
 
 struct VSOut
@@ -15,7 +15,7 @@ struct VSOut
     float4 Pos : SV_Position;
     float3 Color : Color0;
     float2 TexCoord : TexCoord0;
-    uint PolyFlags : BlendIndices0;
+    uint2 PolyFlags : BlendIndices0;
 };
 
 VSOut VSMain(const SPoly Input)
@@ -30,15 +30,16 @@ VSOut VSMain(const SPoly Input)
 
 float4 PSMain(const VSOut Input) : SV_Target
 {
+    
     float4 Color = float4(Input.Color, 1.0f);
-
+    /*
     if (Input.PolyFlags & PF_Masked)
     {
-        //clip(TexDiffuse.Sample(SamPoint, Input.TexCoord).a - 0.5f);
+        clip(TexDiffuse.Sample(SamPoint, Input.TexCoord).a - 0.5f);
     }
-
-    const float3 Diffuse = TexDiffuse.Sample(SamLinear, Input.TexCoord).rgb;
-    Color.rgb *= Diffuse;
-
+    */
+    const float4 Diffuse = TexDiffuse[Input.PolyFlags.y].Sample(SamLinear, Input.TexCoord);
+    Color *= Diffuse;
+    
     return Color;
 }

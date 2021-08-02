@@ -190,7 +190,7 @@ size_t RenDevBackend::NewFrame()
     const CD3DX12_RESOURCE_BARRIER RenderTargetResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(&GetRenderTargetView(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     m_pCommandList->ResourceBarrier(1, &RenderTargetResourceBarrier);
 
-    const float ClearColor[] = { 1.0f, 0.0f, 0.0f, 0.0f };
+    const float ClearColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
     m_pCommandList->ClearRenderTargetView(m_RenderTargetViews[m_iCurrentFrame], ClearColor, 0, nullptr);
     m_pCommandList->ClearDepthStencilView(m_DepthStencilView, D3D12_CLEAR_FLAGS::D3D12_CLEAR_FLAG_DEPTH, m_fDepthClearValue, 0, 0, nullptr);
     m_pCommandList->OMSetRenderTargets(1, &m_RenderTargetViews[m_iCurrentFrame], TRUE, &m_DepthStencilView);

@@ -102,7 +102,7 @@ public:
         const D3D12_RESOURCE_DESC ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(sm_iNumFrames * iReserve * sizeof(T)); //Allocate buffer for all frames (so we don't have to (re)allocate n buffers)
 
         ThrowIfFail(m_Device.CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAGS::D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, __uuidof(m_pBuffer), &m_pBuffer), L"Failed to create dynamic vertex buffer.");
-        wchar_t buf[50];
+        wchar_t buf[254];
         swprintf_s(buf, L"Dynamic buffer of %S (%Iu)", typeid(T).name(), m_iAllocCount);
         m_pBuffer->SetName(buf);
 
