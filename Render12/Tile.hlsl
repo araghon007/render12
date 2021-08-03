@@ -1,6 +1,6 @@
 #include "Render12.hlsli"
 
-Texture2D TexDiffuse[1024] : register(t0);
+Texture2D TexDiffuse[4096] : register(t0);
 
 struct STile
 {
@@ -36,7 +36,7 @@ float4 PSMain(const VSOut Input) : SV_Target
     float4 Color = float4(Input.Color, 1.0f);
     const float4 Diffuse = TexDiffuse[Input.PolyFlags.y].Sample(SamLinear, Input.TexCoord);
     if (Input.PolyFlags.x & PF_Masked || Input.PolyFlags.x & PF_Modulated) // Not sure if Modulated should be clipped, but so far UI elements that I've seen only use 1 bit alpha
-        clip(Diffuse.a - 0.5f);
+        clip(Diffuse.a - 0.9f);
     Color *= Diffuse;
 
     return Color;

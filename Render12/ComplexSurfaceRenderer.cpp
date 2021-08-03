@@ -20,7 +20,7 @@ ComplexSurfaceRenderer::ComplexSurfaceRenderer(ID3D12Device& Device, ID3D12RootS
         {"Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"TexCoord", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"BlendIndices", 0, DXGI_FORMAT_R32G32B32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0} //Todo make 8 bits, if necessary at all -> can't, hlsl doesn't support 8 bit data type
+        {"BlendIndices", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0} //Todo make 8 bits, if necessary at all -> can't, hlsl doesn't support 8 bit data type
     };
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -54,12 +54,27 @@ ComplexSurfaceRenderer::ComplexSurfaceRenderer(ID3D12Device& Device, ID3D12RootS
 
     ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineState)), L"Failed to create pipeline state object.");
 
-    int iBufferSize = sizeof(iList);
+    //Translucent
+
+    psoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+    psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND::D3D12_BLEND_ONE;
+    psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND::D3D12_BLEND_INV_SRC_COLOR;
+    psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP::D3D12_BLEND_OP_ADD;
+
+    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineStateTranslucent)), L"Failed to create pipeline state object.");
+
+    //Modulated
+
+    psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND::D3D12_BLEND_DEST_COLOR;
+    psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND::D3D12_BLEND_SRC_COLOR;
+    psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP::D3D12_BLEND_OP_ADD;
+
+    ThrowIfFail(Device.CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineStateModulated)), L"Failed to create pipeline state object.");
 
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     indexBufferView.BufferLocation = m_IndexBuffer.Get()->GetGPUVirtualAddress();
     indexBufferView.Format = DXGI_FORMAT_R32_UINT; // 32-bit unsigned integer (this is what a dword is, double word, a word is 2 bytes)
-    indexBufferView.SizeInBytes = iBufferSize;
+    indexBufferView.SizeInBytes = m_IndexBuffer.GetSizeBytes();
 
     //ShaderCompiler Compiler(m_Device, L"Render12\\ComplexSurface.hlsl");
     //m_pVertexShader = Compiler.CompileVertexShader();
@@ -86,19 +101,28 @@ void ComplexSurfaceRenderer::NewFrame(const size_t iFrameIndex)
     m_IndexBuffer.NewFrame(iFrameIndex);
 }
 
-void ComplexSurfaceRenderer::Bind()
+void ComplexSurfaceRenderer::Bind(DWORD PolyFlags)
 {
-    m_CommandList.SetPipelineState(m_PipelineState.Get());
-    m_CommandList.IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-    m_CommandList.IASetVertexBuffers(0, 1, &m_VertexBuffer.GetView());
+    // Switch PSO depending on flags
+    if (PolyFlags & PF_Translucent)
+        m_CommandList.SetPipelineState(m_PipelineStateTranslucent.Get());
+    else if (PolyFlags & PF_Modulated)
+        m_CommandList.SetPipelineState(m_PipelineStateModulated.Get());
+    else
+        m_CommandList.SetPipelineState(m_PipelineState.Get());
 
-    m_CommandList.IASetIndexBuffer(&indexBufferView);
+    currFlags = PolyFlags;
 }
 
 void ComplexSurfaceRenderer::Draw()
 {
+    m_CommandList.IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    m_CommandList.IASetVertexBuffers(0, 1, &m_VertexBuffer.GetView());
+
+    m_CommandList.IASetIndexBuffer(&indexBufferView);
+
     auto a = m_IndexBuffer.GetNumNewElements();
-    auto b = m_VertexBuffer.GetFirstNewElementIndex();
+    auto b = m_VertexBuffer.GetFirstElementForFrame();
     auto c = m_IndexBuffer.GetFirstNewElementIndex();
     //m_CommandList.DrawInstanced(a, 1, b, 0); //Just draw the entire thing as 1 big triangle strip, because 
 

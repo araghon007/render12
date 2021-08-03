@@ -41,7 +41,7 @@ public:
         return *PushBack(1);
     }
 
-
+    size_t GetSizeBytes() const { return sm_iNumFrames * m_iReserved * sizeof(T); };
     size_t GetSize() const { return m_iSize; }
     size_t GetReserved() const { return m_iReserved; }
 

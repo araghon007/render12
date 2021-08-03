@@ -63,6 +63,7 @@ void TileRenderer::NewFrame(const size_t iFrameIndex)
 {
     m_iNumDraws = 0;
     m_InstanceBuffer.NewFrame(iFrameIndex);
+    currFlags = 0;
 }
 
 void TileRenderer::Bind(DWORD PolyFlags)
@@ -75,11 +76,12 @@ void TileRenderer::Bind(DWORD PolyFlags)
     else
         m_CommandList.SetPipelineState(m_PipelineState.Get());
 
-    m_CommandList.IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    currFlags = PolyFlags;
 }
 
 void TileRenderer::Draw()
 {
+    m_CommandList.IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     m_CommandList.IASetVertexBuffers(0, 1, &m_InstanceBuffer.GetView());
     m_CommandList.DrawInstanced(4, m_InstanceBuffer.GetNumNewElements(), 0, m_InstanceBuffer.GetFirstNewElementIndex()); //Just draw 4 non-existent vertices per quad, we're only interested in SV_VertexID.
     m_iNumDraws++;

@@ -25,7 +25,9 @@ public:
     void StopBatch() { m_bInBatch = false; }
     bool InBatch() const { return m_bInBatch; }
 
-    void Bind();
+    bool CompareFlags(DWORD PolyFlags) { return PolyFlags == currFlags; };
+
+    void Bind(DWORD PolyFlags);
     void Draw();
 
     Vertex* GetTriangleFan(const size_t iSize) { return DynamicGPUBufferHelpers12::GetTriangleFan(m_VertexBuffer, m_IndexBuffer, iSize); }
@@ -46,13 +48,15 @@ protected:
     ShaderCompiler::CompiledShader m_pPixelShader;
 
     ComPtr<ID3D12PipelineState> m_PipelineState;
+    ComPtr<ID3D12PipelineState> m_PipelineStateTranslucent;
+    ComPtr<ID3D12PipelineState> m_PipelineStateModulated;
 
     DynamicBuffer12<Vertex> m_VertexBuffer;  //We only create a per-instance-data buffer, we don't use a vertex buffer as vertex positions are irrelevant
     DynamicBuffer12<unsigned int> m_IndexBuffer;
 
-    unsigned int iList[DynamicGPUBufferHelpers12::Fan2StripIndices(4096) * 2];
-
     D3D12_INDEX_BUFFER_VIEW indexBufferView;
+
+    DWORD currFlags;
 
     size_t m_iNumDraws = 0; //Number of draw calls this frame, for stats
     bool m_bInBatch = false;

@@ -25,6 +25,8 @@ public:
     void StopBatch() { m_bInBatch = false; }
     bool InBatch() const { return m_bInBatch; }
 
+    bool CompareFlags(DWORD PolyFlags) { return PolyFlags == currFlags; };
+
     void Bind(DWORD PolyFlags);
     void Draw();
 
@@ -48,6 +50,8 @@ protected:
     ComPtr<ID3D12PipelineState> m_PipelineStateModulated;
 
     DynamicBuffer12<Tile> m_InstanceBuffer;  //We only create a per-instance-data buffer, we don't use a vertex buffer as vertex positions are irrelevant
+
+    DWORD currFlags;
 
     size_t m_iNumDraws = 0; //Number of draw calls this frame, for stats
     bool m_bInBatch = false;

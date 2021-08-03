@@ -157,14 +157,14 @@ void UD3D12RenderDevice::Render()
     if (m_pGouraudRenderer->InBatch())
     {
         m_pGouraudRenderer->StopBatch();
-        m_pGouraudRenderer->Bind();
+        //m_pGouraudRenderer->Bind();
         m_pGouraudRenderer->Draw();
     }
     
     if (m_pComplexSurfaceRenderer->InBatch())
     {
         m_pComplexSurfaceRenderer->StopBatch();
-        m_pComplexSurfaceRenderer->Bind();
+        //m_pComplexSurfaceRenderer->Bind();
         m_pComplexSurfaceRenderer->Draw();
     }
 }
@@ -177,6 +177,9 @@ void UD3D12RenderDevice::DrawComplexSurface(FSceneNode* const /*pFrame*/, FSurfa
 
     unsigned int TexFlags = 0;
 
+    unsigned int TexID = 0;
+    unsigned int TexLightID = 0;
+
     const TextureConverter::TextureData* pTexDiffuse = nullptr;
     if (Surface.Texture)
     {
@@ -188,18 +191,27 @@ void UD3D12RenderDevice::DrawComplexSurface(FSceneNode* const /*pFrame*/, FSurfa
         
         pTexDiffuse = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.Texture, 0);
         TexFlags |= 0x00000001;
+        TexID = pTexDiffuse->iHeapIndex;
     }
-
+    
     const TextureConverter::TextureData* pTexLight = nullptr;
     if (Surface.LightMap)
     {
-        if (!m_pTextureCache->IsPrepared(*Surface.LightMap, 1))
+        if (!m_pTextureCache->IsPrepared(*Surface.LightMap, 0))
         {
             //Render();
         }
-        pTexLight = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.LightMap, 1);
+        pTexLight = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.LightMap, 0);
         TexFlags |= 0x00000002;
+        TexLightID = pTexLight->iHeapIndex;
     }
+    
+    //Flush TODO: flush better
+    if (!m_pComplexSurfaceRenderer->CompareFlags(PolyFlags))
+    {
+        Render();
+    }
+    m_pComplexSurfaceRenderer->Bind(PolyFlags);
 
     if (!m_pComplexSurfaceRenderer->InBatch())
     {
@@ -264,7 +276,8 @@ void UD3D12RenderDevice::DrawComplexSurface(FSceneNode* const /*pFrame*/, FSurfa
 
             v.PolyFlags = PolyFlags;
             v.TexFlags = TexFlags;
-            v.TextureIndex = pTexDiffuse->iHeapIndex;
+            v.TextureIndex = TexID;
+            v.LightTextureIndex = TexLightID;
         }
 
     }
@@ -283,6 +296,14 @@ void UD3D12RenderDevice::DrawGouraudPolygon(FSceneNode* const /*pFrame*/, FTextu
     //Render();
 
     //m_pGouraudRenderer->Bind();
+
+
+        //Flush TODO: flush better
+    if (!m_pGouraudRenderer->CompareFlags(PolyFlags))
+    {
+        Render();
+    }
+    m_pGouraudRenderer->Bind(PolyFlags);
 
     if (!m_pGouraudRenderer->InBatch())
     {
@@ -391,8 +412,10 @@ void UD3D12RenderDevice::DrawTile(FSceneNode* const /*pFrame*/, FTextureInfo& In
         const DWORD PolyFlagsCorrected = (PolyFlags & (PF_Translucent | PF_Masked)) == (PF_Translucent | PF_Masked) ? PolyFlags ^ PF_Masked : PolyFlags; //Translucent has precedence over masked
 
         //Flush TODO: flush better
-        Render();
-
+        if (!m_pTileRenderer->CompareFlags(PolyFlagsCorrected))
+        {
+            Render();
+        }
         m_pTileRenderer->Bind(PolyFlagsCorrected);
 
         const auto& TextureData = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
