@@ -30,13 +30,14 @@ VSOut VSMain(const STile Tile, const uint VertexID : SV_VertexID)
     return Output;
 }
 
-float3 PSMain(const VSOut Input) : SV_Target
+float4 PSMain(const VSOut Input) : SV_Target
 {  
 
+    float4 Color = float4(Input.Color, 1.0f);
     const float4 Diffuse = TexDiffuse[Input.PolyFlags.y].Sample(SamLinear, Input.TexCoord);
     if (Input.PolyFlags.x & PF_Masked || Input.PolyFlags.x & PF_Modulated) // Not sure if Modulated should be clipped, but so far UI elements that I've seen only use 1 bit alpha
         clip(Diffuse.a - 0.5f);
-    const float3 Color = Diffuse.rgb * Input.Color;
+    Color *= Diffuse;
 
     return Color;
 }

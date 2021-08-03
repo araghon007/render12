@@ -21,21 +21,21 @@ public:
     GouraudRenderer& operator=(const GouraudRenderer&) = delete;
     
     void NewFrame(const size_t iFrameIndex);
-    void StartBatch() { assert(!m_bInBatch);  m_InstanceBuffer.StartBatch(); m_IndexBuffer.StartBatch(); m_bInBatch = true; }
+    void StartBatch() { assert(!m_bInBatch);  m_VertexBuffer.StartBatch(); m_IndexBuffer.StartBatch(); m_bInBatch = true; }
     void StopBatch() { m_bInBatch = false; }
     bool InBatch() const { return m_bInBatch; }
 
     void Bind();
     void Draw();
 
-    Vertex* GetTriangleFan(const size_t iSize) { return DynamicGPUBufferHelpers12::GetTriangleFan(m_InstanceBuffer, m_IndexBuffer, iList, iIndex, iSize); }
+    Vertex* GetTriangleFan(const size_t iSize) { return DynamicGPUBufferHelpers12::GetTriangleFan(m_VertexBuffer, m_IndexBuffer, iSize); }
 
-    Vertex& GetTriangle() { return m_InstanceBuffer.PushBack(); }
+    Vertex& GetTriangle() { return m_VertexBuffer.PushBack(); }
 
     //Diagnostics
-    size_t GetNumIndices() const { return m_InstanceBuffer.GetSize(); }
+    size_t GetNumIndices() const { return m_IndexBuffer.GetSize(); }
     size_t GetNumDraws() const { return m_iNumDraws; }
-    size_t GetMaxIndices() const { return m_InstanceBuffer.GetReserved(); }
+    size_t GetMaxIndices() const { return m_IndexBuffer.GetReserved(); }
 
 protected:
     ID3D12Device& m_Device;
@@ -47,16 +47,10 @@ protected:
 
     ComPtr<ID3D12PipelineState> m_PipelineState;
 
-    DynamicBuffer12<Vertex> m_InstanceBuffer;  //We only create a per-instance-data buffer, we don't use a vertex buffer as vertex positions are irrelevant
+    DynamicBuffer12<Vertex> m_VertexBuffer;  //We only create a per-instance-data buffer, we don't use a vertex buffer as vertex positions are irrelevant
     DynamicBuffer12<unsigned int> m_IndexBuffer;
 
-    ID3D12Resource* iBuffer;
-
-    D3D12_SUBRESOURCE_DATA indexData;
-
     unsigned int iList[DynamicGPUBufferHelpers12::Fan2StripIndices(4096) * 2];
-
-    int iIndex;
 
     D3D12_INDEX_BUFFER_VIEW indexBufferView;
 

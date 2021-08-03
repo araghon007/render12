@@ -157,7 +157,7 @@ namespace DynamicGPUBufferHelpers12
     }
 
     template<class VertType, class IndexType>
-    VertType* GetTriangleFan(DynamicBuffer12<VertType>& VertexBuffer, DynamicBuffer12<IndexType>& IndexBuffer, unsigned int* iList, int& iIndex, const size_t iSize)
+    VertType* GetTriangleFan(DynamicBuffer12<VertType>& VertexBuffer, DynamicBuffer12<IndexType>& IndexBuffer, const size_t iSize)
     {
         //Generate indices
         assert(iSize >= 3);
@@ -167,18 +167,12 @@ namespace DynamicGPUBufferHelpers12
         assert(VertexBuffer.GetSize() < std::numeric_limits<IndexType>::max());
         const IndexType iNumVerts = static_cast<IndexType>(VertexBuffer.GetSize());//
         pIndices[0] = iNumVerts + 1;
-        iList[iIndex] = iNumVerts + 1;
         for (IndexType i = 1; i < iNumIndices - 1; i += 2)
         {
             pIndices[i] = iNumVerts + (i / 2) + 2;
-            iList[i+iIndex] = iNumVerts + (i / 2) + 2;
             pIndices[i + 1] = iNumVerts; //Center point
-            iList[i+iIndex + 1] = iNumVerts; //Center point
         }
         pIndices[iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
-        iList[iIndex + iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
-
-        iIndex += iNumIndices;
 
         return VertexBuffer.PushBack(iSize);
     }
