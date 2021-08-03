@@ -303,8 +303,8 @@ void UD3D12RenderDevice::DrawGouraudPolygon(FSceneNode* const /*pFrame*/, FTextu
 
     const auto& texDiffuse = m_pTextureCache->FindOrInsertAndPrepare(Info, 0);
 
-    GouraudRenderer::Vertex* const pVerts = m_pGouraudRenderer->GetTriangleFan(3);
-    for (int i = 0; i < 3; i++) //Set fan verts
+    GouraudRenderer::Vertex* const pVerts = m_pGouraudRenderer->GetTriangleFan(NumPts);
+    for (int i = 0; i < NumPts; i++) //Set fan verts
     {
         GouraudRenderer::Vertex& v = pVerts[i];
 
@@ -402,7 +402,7 @@ void UD3D12RenderDevice::DrawTile(FSceneNode* const /*pFrame*/, FTextureInfo& In
         */    
         const DWORD PolyFlagsCorrected = (PolyFlags & (PF_Translucent | PF_Masked)) == (PF_Translucent | PF_Masked) ? PolyFlags ^ PF_Masked : PolyFlags; //Translucent has precedence over masked
 
-        //Flush
+        //Flush TODO: flush better
         Render();
 
         m_pTileRenderer->Bind(PolyFlagsCorrected);

@@ -12,7 +12,7 @@ GlobalShaderConstants::GlobalShaderConstants(ID3D12Device& Device, ID3D12Graphic
     Parameters[1].InitAsDescriptorTable(Ranges.size(), Ranges.data(), D3D12_SHADER_VISIBILITY_PIXEL);
 
     std::array<D3D12_STATIC_SAMPLER_DESC, 1> Samplers;
-    Samplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+    Samplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     Samplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     Samplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     Samplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;

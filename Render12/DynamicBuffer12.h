@@ -45,6 +45,10 @@ public:
     size_t GetSize() const { return m_iSize; }
     size_t GetReserved() const { return m_iReserved; }
 
+    ID3D12Resource* Get() {
+        return m_pBuffer.Get();
+    }
+
     void NewFrame(const size_t iFrameIndex)
     {
         m_iCurrFrameIndex = iFrameIndex;
@@ -144,3 +148,38 @@ public:
     T* m_pData = nullptr; //Start of buffer
     D3D12_VERTEX_BUFFER_VIEW m_View;
 };
+
+namespace DynamicGPUBufferHelpers12
+{
+    constexpr size_t Fan2StripIndices(const size_t iSize)
+    {
+        return 2 * (iSize - 2) + 2;
+    }
+
+    template<class VertType, class IndexType>
+    VertType* GetTriangleFan(DynamicBuffer12<VertType>& VertexBuffer, DynamicBuffer12<IndexType>& IndexBuffer, unsigned int* iList, int& iIndex, const size_t iSize)
+    {
+        //Generate indices
+        assert(iSize >= 3);
+        const size_t iNumIndices = Fan2StripIndices(iSize);
+        IndexType* const pIndices = IndexBuffer.PushBack(iNumIndices);
+
+        assert(VertexBuffer.GetSize() < std::numeric_limits<IndexType>::max());
+        const IndexType iNumVerts = static_cast<IndexType>(VertexBuffer.GetSize());//
+        pIndices[0] = iNumVerts + 1;
+        iList[iIndex] = iNumVerts + 1;
+        for (IndexType i = 1; i < iNumIndices - 1; i += 2)
+        {
+            pIndices[i] = iNumVerts + (i / 2) + 2;
+            iList[i+iIndex] = iNumVerts + (i / 2) + 2;
+            pIndices[i + 1] = iNumVerts; //Center point
+            iList[i+iIndex + 1] = iNumVerts; //Center point
+        }
+        pIndices[iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
+        iList[iIndex + iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
+
+        iIndex += iSize + 1;
+
+        return VertexBuffer.PushBack(iSize);
+    }
+}
