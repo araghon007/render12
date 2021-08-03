@@ -145,7 +145,7 @@ void GouraudRenderer::Bind()
 void GouraudRenderer::Draw()
 {
     
-    auto a = m_InstanceBuffer.GetNumNewElements();
+    auto a = m_IndexBuffer.GetNumNewElements();
     auto b = m_InstanceBuffer.GetFirstNewElementIndex();
     auto c = m_IndexBuffer.GetFirstNewElementIndex();
     //m_CommandList.DrawInstanced(a, 1, b, 0); //Just draw the entire thing as 1 big triangle strip, because 

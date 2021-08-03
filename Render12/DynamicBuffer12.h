@@ -178,7 +178,7 @@ namespace DynamicGPUBufferHelpers12
         pIndices[iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
         iList[iIndex + iNumIndices - 1] = 0xFFFFFFFF; //Strip-cut index
 
-        iIndex += iSize + 1;
+        iIndex += iNumIndices;
 
         return VertexBuffer.PushBack(iSize);
     }

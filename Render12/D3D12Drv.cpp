@@ -55,7 +55,7 @@ UBOOL UD3D12RenderDevice::Init(UViewport* const pInViewport, const INT iNewX, co
         m_pTextureCache = std::make_unique<TextureCache>(Device, CommandList);
         m_pTileRenderer = std::make_unique<TileRenderer>(Device, m_pGlobalShaderConstants->GetRootSignature(), CommandList);
         m_pGouraudRenderer = std::make_unique<GouraudRenderer>(Device, m_pGlobalShaderConstants->GetRootSignature(), CommandList);
-       // m_pComplexSurfaceRenderer = std::make_unique<ComplexSurfaceRenderer>(Device, DeviceContext);
+        m_pComplexSurfaceRenderer = std::make_unique<ComplexSurfaceRenderer>(Device, m_pGlobalShaderConstants->GetRootSignature(), CommandList);
     }
     catch (const WException& ex)
     {
@@ -118,7 +118,7 @@ void UD3D12RenderDevice::Lock(const FPlane /*FlashScale*/, const FPlane /*FlashF
     const size_t iFrameIndex = m_Backend.NewFrame();
     m_pTileRenderer->NewFrame(iFrameIndex);
     m_pGouraudRenderer->NewFrame(iFrameIndex);
-    //m_pComplexSurfaceRenderer->NewFrame();
+    m_pComplexSurfaceRenderer->NewFrame(iFrameIndex);
     m_pGlobalShaderConstants->Bind();
 }
 
@@ -161,125 +161,113 @@ void UD3D12RenderDevice::Render()
         m_pGouraudRenderer->Draw();
     }
     
-    //if (m_pComplexSurfaceRenderer->IsMapped())
-    //{
-    //    m_pComplexSurfaceRenderer->Unmap();
-    //    m_pComplexSurfaceRenderer->Bind();
-    //    m_pComplexSurfaceRenderer->Draw();
-    //}
+    if (m_pComplexSurfaceRenderer->InBatch())
+    {
+        m_pComplexSurfaceRenderer->StopBatch();
+        m_pComplexSurfaceRenderer->Bind();
+        m_pComplexSurfaceRenderer->Draw();
+    }
 }
 
 void UD3D12RenderDevice::DrawComplexSurface(FSceneNode* const /*pFrame*/, FSurfaceInfo& Surface, FSurfaceFacet& Facet)
 {
-    //assert(m_bNoTilesDrawnYet); //Want to be sure that tiles are the last thing to be drawn
+    assert(m_bNoTilesDrawnYet); //Want to be sure that tiles are the last thing to be drawn
 
-    //const DWORD PolyFlags = Surface.PolyFlags;
-    //const auto& BlendState = m_pDeviceState->GetBlendStateForPolyFlags(PolyFlags);
-    //const auto& DepthStencilState = m_pDeviceState->GetDepthStencilStateForPolyFlags(PolyFlags);
-    //if (!m_pDeviceState->IsBlendStatePrepared(BlendState) || !m_pDeviceState->IsDepthStencilStatePrepared(DepthStencilState) || m_pTileRenderer->IsMapped() || m_pGouraudRenderer->IsMapped())
-    //{
-    //    Render();
-    //}
+    const DWORD PolyFlags = Surface.PolyFlags;
 
-    //unsigned int TexFlags = 0;
+    unsigned int TexFlags = 0;
 
-    //const TextureConverter::TextureData* pTexDiffuse = nullptr;
-    //if (Surface.Texture)
-    //{
-    //    if (!m_pTextureCache->IsPrepared(*Surface.Texture, 0))
-    //    {
-    //        Render();
-    //    }
-    //    pTexDiffuse = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.Texture, 0);
-    //    TexFlags |= 0x00000001;
-    //}
+    const TextureConverter::TextureData* pTexDiffuse = nullptr;
+    if (Surface.Texture)
+    {
+        
+        if (!m_pTextureCache->IsPrepared(*Surface.Texture, 0))
+        {
+            //Render();
+        }
+        
+        pTexDiffuse = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.Texture, 0);
+        TexFlags |= 0x00000001;
+    }
 
-    //const TextureConverter::TextureData* pTexLight = nullptr;
-    //if (Surface.LightMap)
-    //{
+    const TextureConverter::TextureData* pTexLight = nullptr;
+    if (Surface.LightMap)
+    {
+        if (!m_pTextureCache->IsPrepared(*Surface.LightMap, 1))
+        {
+            //Render();
+        }
+        pTexLight = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.LightMap, 1);
+        TexFlags |= 0x00000002;
+    }
 
-    //    if (Surface.LightMap->bRealtimeChanged)
-    //    {
-    //        m_LightMaps.push_back(Surface.LightMap->CacheID);
-    //    }
+    if (!m_pComplexSurfaceRenderer->InBatch())
+    {
+        m_pComplexSurfaceRenderer->StartBatch();
+    }
 
-    //    if (!m_pTextureCache->IsPrepared(*Surface.LightMap, 1))
-    //    {
-    //        Render();
-    //    }
-    //    pTexLight = &m_pTextureCache->FindOrInsertAndPrepare(*Surface.LightMap, 1);
-    //    TexFlags |= 0x00000002;
-    //}
+    //Code from OpenGL renderer to calculate texture coordinates
+    const float UDot = Facet.MapCoords.XAxis | Facet.MapCoords.Origin;
+    const float VDot = Facet.MapCoords.YAxis | Facet.MapCoords.Origin;
 
-    //m_pDeviceState->PrepareDepthStencilState(DepthStencilState);
-    //m_pDeviceState->PrepareBlendState(BlendState);
+    //Draw each polygon
+    for (const FSavedPoly* pPoly = Facet.Polys; pPoly; pPoly = pPoly->Next)
+    {
+        assert(pPoly);
+        const FSavedPoly& Poly = *pPoly;
+        if (Poly.NumPts < 3) //Skip invalid polygons
+        {
+            continue;
+        }
 
-    //if (!m_pComplexSurfaceRenderer->IsMapped())
-    //{
-    //    m_pComplexSurfaceRenderer->Map();
-    //}
+        ComplexSurfaceRenderer::Vertex* const pVerts = m_pComplexSurfaceRenderer->GetTriangleFan(Poly.NumPts); //Reserve space and generate indices for fan		
+        for (int i = 0; i < Poly.NumPts; i++)
+        {
+            ComplexSurfaceRenderer::Vertex& v = pVerts[i];
 
-    ////Code from OpenGL renderer to calculate texture coordinates
-    //const float UDot = Facet.MapCoords.XAxis | Facet.MapCoords.Origin;
-    //const float VDot = Facet.MapCoords.YAxis | Facet.MapCoords.Origin;
+            //Code from OpenGL renderer to calculate texture coordinates
+            const float U = Facet.MapCoords.XAxis | Poly.Pts[i]->Point;
+            const float V = Facet.MapCoords.YAxis | Poly.Pts[i]->Point;
+            const float UCoord = U - UDot;
+            const float VCoord = V - VDot;
 
-    ////Draw each polygon
-    //for (const FSavedPoly* pPoly = Facet.Polys; pPoly; pPoly = pPoly->Next)
-    //{
-    //    assert(pPoly);
-    //    const FSavedPoly& Poly = *pPoly;
-    //    if (Poly.NumPts < 3) //Skip invalid polygons
-    //    {
-    //        continue;
-    //    }
+            //Diffuse texture coordinates
+            v.TexCoords.x = (UCoord - Surface.Texture->Pan.X)*pTexDiffuse->fMultU;
+            v.TexCoords.y = (VCoord - Surface.Texture->Pan.Y)*pTexDiffuse->fMultV;
 
-    //    ComplexSurfaceRenderer::Vertex* const pVerts = m_pComplexSurfaceRenderer->GetTriangleFan(Poly.NumPts); //Reserve space and generate indices for fan		
-    //    for (int i = 0; i < Poly.NumPts; i++)
-    //    {
-    //        ComplexSurfaceRenderer::Vertex& v = pVerts[i];
+            if (Surface.LightMap)
+            {
+                //Lightmaps require pan correction of -.5
+                v.TexCoords1.x = (UCoord - (Surface.LightMap->Pan.X - 0.5f*Surface.LightMap->UScale))*pTexLight->fMultU;
+                v.TexCoords1.y = (VCoord - (Surface.LightMap->Pan.Y - 0.5f*Surface.LightMap->VScale))*pTexLight->fMultV;
+            }
+            //if (Surface.DetailTexture)
+            //{
+            //    v->TexCoord[2].x = (UCoord - Surface.DetailTexture->Pan.X)*detail->multU;
+            //    v->TexCoord[2].y = (VCoord - Surface.DetailTexture->Pan.Y)*detail->multV;
+            //}
+            //if (Surface.FogMap)
+            //{
+            //    //Fogmaps require pan correction of -.5
+            //    v->TexCoord[3].x = (UCoord - (Surface.FogMap->Pan.X - 0.5f*Surface.FogMap->UScale))*fogMap->multU;
+            //    v->TexCoord[3].y = (VCoord - (Surface.FogMap->Pan.Y - 0.5f*Surface.FogMap->VScale))*fogMap->multV;
+            //}
+            //if (Surface.MacroTexture)
+            //{
+            //    v->TexCoord[4].x = (UCoord - Surface.MacroTexture->Pan.X)*macro->multU;
+            //    v->TexCoord[4].y = (VCoord - Surface.MacroTexture->Pan.Y)*macro->multV;
+            //}
+            auto test = Poly.Pts[i];
+            v.Pos.x = test->Point.X;
+            v.Pos.y = test->Point.Y;
+            v.Pos.z = test->Point.Z;
 
-    //        //Code from OpenGL renderer to calculate texture coordinates
-    //        const float U = Facet.MapCoords.XAxis | Poly.Pts[i]->Point;
-    //        const float V = Facet.MapCoords.YAxis | Poly.Pts[i]->Point;
-    //        const float UCoord = U - UDot;
-    //        const float VCoord = V - VDot;
+            v.PolyFlags = PolyFlags;
+            v.TexFlags = TexFlags;
+            v.TextureIndex = pTexDiffuse->iHeapIndex;
+        }
 
-    //        //Diffuse texture coordinates
-    //        v.TexCoords.x = (UCoord - Surface.Texture->Pan.X)*pTexDiffuse->fMultU;
-    //        v.TexCoords.y = (VCoord - Surface.Texture->Pan.Y)*pTexDiffuse->fMultV;
-
-    //        if (Surface.LightMap)
-    //        {
-    //            //Lightmaps require pan correction of -.5
-    //            v.TexCoords1.x = (UCoord - (Surface.LightMap->Pan.X - 0.5f*Surface.LightMap->UScale))*pTexLight->fMultU;
-    //            v.TexCoords1.y = (VCoord - (Surface.LightMap->Pan.Y - 0.5f*Surface.LightMap->VScale))*pTexLight->fMultV;
-    //        }
-    //        //if (Surface.DetailTexture)
-    //        //{
-    //        //    v->TexCoord[2].x = (UCoord - Surface.DetailTexture->Pan.X)*detail->multU;
-    //        //    v->TexCoord[2].y = (VCoord - Surface.DetailTexture->Pan.Y)*detail->multV;
-    //        //}
-    //        //if (Surface.FogMap)
-    //        //{
-    //        //    //Fogmaps require pan correction of -.5
-    //        //    v->TexCoord[3].x = (UCoord - (Surface.FogMap->Pan.X - 0.5f*Surface.FogMap->UScale))*fogMap->multU;
-    //        //    v->TexCoord[3].y = (VCoord - (Surface.FogMap->Pan.Y - 0.5f*Surface.FogMap->VScale))*fogMap->multV;
-    //        //}
-    //        //if (Surface.MacroTexture)
-    //        //{
-    //        //    v->TexCoord[4].x = (UCoord - Surface.MacroTexture->Pan.X)*macro->multU;
-    //        //    v->TexCoord[4].y = (VCoord - Surface.MacroTexture->Pan.Y)*macro->multV;
-    //        //}
-
-    //        static_assert(sizeof(Poly.Pts[i]->Point) >= sizeof(v.Pos), "Sizes differ, can't use reinterpret_cast");
-    //        v.Pos = reinterpret_cast<decltype(v.Pos)&>(Poly.Pts[i]->Point);
-
-    //        v.PolyFlags = PolyFlags;
-    //        v.TexFlags = TexFlags;
-
-    //    }
-
-    //}
+    }
 }
 
 void UD3D12RenderDevice::DrawGouraudPolygon(FSceneNode* const /*pFrame*/, FTextureInfo& Info, FTransTexture** const ppPts, const int NumPts, const DWORD PolyFlags, FSpanBuffer* const /*pSpan*/)
